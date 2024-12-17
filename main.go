@@ -1,8 +1,10 @@
 package main
 
 import(
+	"database/sql"
 	"net/http"
 	"github.com/gin-gonic/gin"
+	"github.com/mattn/go-sqlite3"
 )
 
 type album struct {
@@ -17,7 +19,22 @@ var albums = []album{
 	{ID: "2", Title: "Jeru", Artist: "Gerry Mulligan", Price: 17.99},
    	{ID: "3", Title: "Sarah Vaughan and Clifford Brown", Artist: "Sarah Vaughan", Price: 39.99},
 }
+
 func main() {
+	db, err := sql.Open("sqlite3", "albums.db")
+	if err != nil{
+		log.Fatal(err)
+	}
+	defer db.Close()
+	createTableSQL := `CREATE TABLE IF NOT EXISTS albums(
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	title TEXT NOT NULL
+	artist TEXT NOT NULL
+	price FLOAT
+	)`
+	db.Exec(createTableSQL)
+	fmt.Println("Table created!!")
+	insertSQL := `INSERT INTO albums (title, artist, price) VALUES (?, ?, ?);`
 	router := gin.Default()
 	router.GET("/albums", getAlbums)
 	router.GET("/albums/:id", getAlbumByID)
