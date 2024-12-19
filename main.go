@@ -41,8 +41,7 @@ func main() {
 	router.GET("/albums", getAlbums)
 	// router.GET("/albums/:id", getAlbumByID)
 	router.POST("/albums", postAlbums)
-	// router.DELETE("/albums/:id", deleteAlbumByID)
-	//
+	router.DELETE("/albums/:id", deleteAlbumByID)
 	router.Run("localhost:8080")
 }
 
@@ -77,17 +76,19 @@ func postAlbums(c *gin.Context){
 	c.IndentedJSON(http.StatusCreated, newAlbum)
 }
 
-// func deleteAlbumByID(c *gin.Context){
-// 	id := c.Param("id")
-// 	for i, a:= range albums {
-// 		if a.ID == id {
-// 			albums = append(albums[:i], albums[i+1:]...)
-// 			return
-// 		}
-// 	}
-// 	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "album not found"})
-// }
-//
+func deleteAlbumByID(c *gin.Context){
+	id := c.Param("id")
+	deleteSQL := `DELETE FROM albums WHERE id = ?;`
+	res, _ := db.Exec(deleteSQL, id)
+	rowsAffected, _ := res.RowsAffected()
+	if rowsAffected == 0 {
+	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "album not found"})
+		return
+	}
+	c.IndentedJSON(http.StatusOK, gin.H{"message": "Album deleted successfully"})
+
+}
+
 // func getAlbumByID(c *gin.Context){
 // 	id := c.Param("id")
 // 	for _, a:= range albums {
