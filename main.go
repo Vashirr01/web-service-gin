@@ -3,9 +3,13 @@ package main
 import(
 	"database/sql"
 	"net/http"
+	"fmt"
+	"log"
 	"github.com/gin-gonic/gin"
-	"github.com/mattn/go-sqlite3"
+	_ "github.com/mattn/go-sqlite3"
 )
+
+var db *sql.DB
 
 type album struct {
 	ID string `json: "id"`
@@ -14,37 +18,48 @@ type album struct {
 	Price float64 `json: "price"`
 }
 
-var albums = []album{
-	{ID: "1", Title: "Blue Train", Artist: "John Coltrane", Price: 56.99},
-	{ID: "2", Title: "Jeru", Artist: "Gerry Mulligan", Price: 17.99},
-   	{ID: "3", Title: "Sarah Vaughan and Clifford Brown", Artist: "Sarah Vaughan", Price: 39.99},
-}
-
 func main() {
-	db, err := sql.Open("sqlite3", "albums.db")
+	//TODO error handling for database code
+	var err error
+	db, err = sql.Open("sqlite3", "albums.db")
 	if err != nil{
 		log.Fatal(err)
 	}
 	defer db.Close()
 	createTableSQL := `CREATE TABLE IF NOT EXISTS albums(
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	title TEXT NOT NULL
-	artist TEXT NOT NULL
+	title TEXT NOT NULL,
+	artist TEXT NOT NULL,
 	price FLOAT
 	)`
-	db.Exec(createTableSQL)
-	fmt.Println("Table created!!")
-	insertSQL := `INSERT INTO albums (title, artist, price) VALUES (?, ?, ?);`
+	_, err = db.Exec(createTableSQL)
+	if err != nil {
+		log.Fatalf("Failed to create table: %v", err)
+	}
+	fmt.Println("Table created successfully!")
 	router := gin.Default()
 	router.GET("/albums", getAlbums)
-	router.GET("/albums/:id", getAlbumByID)
+	// router.GET("/albums/:id", getAlbumByID)
 	router.POST("/albums", postAlbums)
-	router.DELETE("/albums/:id", deleteAlbumByID)
-
+	// router.DELETE("/albums/:id", deleteAlbumByID)
+	//
 	router.Run("localhost:8080")
 }
 
 func getAlbums(c *gin.Context){
+	 rows, err := db.Query("SELECT id, title, artist, price FROM albums")
+	    if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	    }
+	defer rows.Close()
+
+	var albums []album;
+	for rows.Next() {
+		var a album
+		rows.Scan(&a.ID, &a.Title, &a.Artist, &a.Price)
+		albums = append(albums, a)
+	}
 	c.IndentedJSON(http.StatusOK, albums)
 }
 
@@ -53,29 +68,33 @@ func postAlbums(c *gin.Context){
 	if err := c.BindJSON(&newAlbum); err!= nil{
 		return
 	}
-
-	albums = append(albums, newAlbum)
+	insertSQL := `INSERT INTO albums (title, artist, price) VALUES (?, ?, ?);`
+	var err error;
+	    _, err = db.Exec(insertSQL, newAlbum.Title, newAlbum.Artist, newAlbum.Price)
+	    if err != nil {
+		log.Fatal(err)
+	    }
 	c.IndentedJSON(http.StatusCreated, newAlbum)
 }
 
-func deleteAlbumByID(c *gin.Context){
-	id := c.Param("id")
-	for i, a:= range albums {
-		if a.ID == id {
-			albums = append(albums[:i], albums[i+1:]...)
-			return
-		}
-	}
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "album not found"})
-}
-
-func getAlbumByID(c *gin.Context){
-	id := c.Param("id")
-	for _, a:= range albums {
-		if a.ID == id {
-			c.IndentedJSON(http.StatusOK, a)
-			return
-		}
-	}
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "album not found"})
-}
+// func deleteAlbumByID(c *gin.Context){
+// 	id := c.Param("id")
+// 	for i, a:= range albums {
+// 		if a.ID == id {
+// 			albums = append(albums[:i], albums[i+1:]...)
+// 			return
+// 		}
+// 	}
+// 	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "album not found"})
+// }
+//
+// func getAlbumByID(c *gin.Context){
+// 	id := c.Param("id")
+// 	for _, a:= range albums {
+// 		if a.ID == id {
+// 			c.IndentedJSON(http.StatusOK, a)
+// 			return
+// 		}
+// 	}
+// 	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "album not found"})
+// }
