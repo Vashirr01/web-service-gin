@@ -39,7 +39,7 @@ func main() {
 	fmt.Println("Table created successfully!")
 	router := gin.Default()
 	router.GET("/albums", getAlbums)
-	// router.GET("/albums/:id", getAlbumByID)
+	router.GET("/albums/:id", getAlbumByID)
 	router.POST("/albums", postAlbums)
 	router.DELETE("/albums/:id", deleteAlbumByID)
 	router.Run("localhost:8080")
@@ -89,13 +89,14 @@ func deleteAlbumByID(c *gin.Context){
 
 }
 
-// func getAlbumByID(c *gin.Context){
-// 	id := c.Param("id")
-// 	for _, a:= range albums {
-// 		if a.ID == id {
-// 			c.IndentedJSON(http.StatusOK, a)
-// 			return
-// 		}
-// 	}
-// 	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "album not found"})
-// }
+func getAlbumByID(c *gin.Context){
+	var a album;
+	id := c.Param("id")
+	 err := db.QueryRow("SELECT id, title, artist, price FROM albums WHERE id = ?", id).Scan(&a.ID, &a.Title, &a.Artist, &a.Price)
+	if err == sql.ErrNoRows {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "album not found"})
+		return
+	}
+	c.IndentedJSON(http.StatusOK, a)
+}
+
