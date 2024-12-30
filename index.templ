@@ -1,0 +1,36 @@
+package main
+
+import(
+	"fmt"
+)
+
+templ MainTemp(albums []album) {
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Fav Albums</title>
+</head>
+<body>
+    <header>
+        <h1>Your Fav Albums</h1>
+    </header>
+
+    <main>
+    for _, album := range albums {
+	<div class="album">
+		<div>{album.ID}</div>
+		<div>{album.Title}</div>
+		<div>{album.Artist}</div>
+		<div>{fmt.Sprintf("%.2f", album.Price)}</div>
+	</div>
+    }
+    </main>
+
+    <footer>
+    </footer>
+
+</body>
+</html>
+}
