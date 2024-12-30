@@ -40,6 +40,7 @@ func main() {
 	fmt.Println("Table created successfully!")
 	router := gin.Default()
 	// router.GET("/hello", helloWorldHandler)
+	router.GET("/", initRender)
 	router.GET("/albums", getAlbums)
 	router.GET("/albums/:id", getAlbumByID)
 	router.POST("/albums", postAlbums)
@@ -47,10 +48,15 @@ func main() {
 	router.Run("localhost:8080")
 }
 
-//	func helloWorldHandler(c *gin.Context){
-//		c.Header("Content-Type", "text/html")
-//		helloWrldTemplate.Render(c.Writer)
-//	}
+func render(c *gin.Context, status int, template templ.Component) error {
+	c.Status(status)
+	return template.Render(c.Request.Context(), c.Writer)
+}
+
+func initRender(c *gin.Context) {
+	render(c, 200, test())
+}
+
 func getAlbums(c *gin.Context) {
 	rows, err := db.Query("SELECT id, title, artist, price FROM albums")
 	if err != nil {
