@@ -83,6 +83,32 @@ func postAlbums(c *gin.Context) {
 	c.IndentedJSON(http.StatusCreated, newAlbum)
 }
 
+func reorderIDs() {
+	// Step 1: Create a temporary table
+	_, err := db.Exec("CREATE TEMPORARY TABLE albums_temp AS SELECT title, artist, price FROM albums")
+	if err != nil {
+		log.Fatalf("Failed to create temporary table: %v", err)
+	}
+
+	// Step 2: Clear the original table
+	_, err = db.Exec("DELETE FROM albums")
+	if err != nil {
+		log.Fatalf("Failed to clear original table: %v", err)
+	}
+
+	// Step 3: Insert data back with sequential IDs
+	_, err = db.Exec("INSERT INTO albums (title, artist, price) SELECT title, artist, price FROM albums_temp")
+	if err != nil {
+		log.Fatalf("Failed to reinsert data: %v", err)
+	}
+
+	// Step 4: Drop the temporary table
+	_, err = db.Exec("DROP TABLE albums_temp")
+	if err != nil {
+		log.Fatalf("Failed to drop temporary table: %v", err)
+	}
+}
+
 func deleteAlbumByID(c *gin.Context) {
 	id := c.Param("id")
 	deleteSQL := `DELETE FROM albums WHERE id = ?;`
@@ -92,6 +118,7 @@ func deleteAlbumByID(c *gin.Context) {
 		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "album not found"})
 		return
 	}
+	reorderIDs()
 	c.IndentedJSON(http.StatusOK, gin.H{"message": "Album deleted successfully"})
 
 }
