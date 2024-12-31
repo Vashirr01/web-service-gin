@@ -3,11 +3,13 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"log"
+	"net/http"
+	"strconv"
+
 	"github.com/a-h/templ"
 	"github.com/gin-gonic/gin"
 	_ "github.com/mattn/go-sqlite3"
-	"log"
-	"net/http"
 )
 
 var db *sql.DB
@@ -42,7 +44,7 @@ func main() {
 
 	router.GET("/", getAlbums)
 	router.GET("/albums/:id", getAlbumByID)
-	router.POST("/albums", postAlbums)
+	router.POST("/", postAlbums)
 	router.DELETE("/albums/:id", deleteAlbumByID)
 	router.Run("localhost:8080")
 }
@@ -71,16 +73,20 @@ func getAlbums(c *gin.Context) {
 
 func postAlbums(c *gin.Context) {
 	var newAlbum album
-	if err := c.BindJSON(&newAlbum); err != nil {
+	newAlbum.Title = c.PostForm("title")
+	newAlbum.Artist = c.PostForm("artist")
+	price := c.PostForm("price")
+	var err error
+	newAlbum.Price, err = strconv.ParseFloat(price, 64)
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "Invalid price"})
 		return
 	}
 	insertSQL := `INSERT INTO albums (title, artist, price) VALUES (?, ?, ?);`
-	var err error
 	_, err = db.Exec(insertSQL, newAlbum.Title, newAlbum.Artist, newAlbum.Price)
 	if err != nil {
 		log.Fatal(err)
 	}
-	c.IndentedJSON(http.StatusCreated, newAlbum)
 }
 
 func deleteAlbumByID(c *gin.Context) {

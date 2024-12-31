@@ -19,13 +19,28 @@ templ MainTemp(albums []album) {
     </header>
 
     <main>
+    <form hx-post="/" hx-target="main">
+    <div>
+    <label>Title</label>
+    <input type="text" class="add-album" name="title">
+    </div>
+    <div>
+    <label>Artist</label>
+    <input type="text" class="add-album" name="artist">
+    </div>
+    <div>
+    <label>Price</label>
+    <input type="number" class="add-album" name="price">
+    </div>
+    <button type="submit">Submit</button>
+    </form>
     for _, album := range albums {
 	<div class="album">
-		<button hx-delete={fmt.Sprintf("/albums/%s", album.ID)} hx-target=".album">Delete</button>
 		<div>{album.ID}</div>
 		<div>{album.Title}</div>
 		<div>{album.Artist}</div>
 		<div>{fmt.Sprintf("%.2f", album.Price)}</div>
+		<button hx-delete={fmt.Sprintf("/albums/%s", album.ID)} hx-target=".album">Delete</button>
 	</div>
     }
     </main>
