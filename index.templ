@@ -4,6 +4,16 @@ import(
 	"fmt"
 )
 
+templ Album(album album){
+	<div class="album">
+		<div>{album.ID}</div>
+		<div>{album.Title}</div>
+		<div>{album.Artist}</div>
+		<div>{fmt.Sprintf("%.2f", album.Price)}</div>
+		<button hx-delete={fmt.Sprintf("/albums/%s", album.ID)} hx-target=".album">Delete</button>
+	</div>
+}
+
 templ MainTemp(albums []album) {
 <!DOCTYPE html>
 <html lang="en">
@@ -19,7 +29,7 @@ templ MainTemp(albums []album) {
     </header>
 
     <main>
-    <form hx-post="/" hx-target="main">
+    <form hx-post="/">
     <div>
     <label>Title</label>
     <input type="text" class="add-album" name="title">
@@ -34,15 +44,11 @@ templ MainTemp(albums []album) {
     </div>
     <button type="submit">Submit</button>
     </form>
+    <div id="albums">
     for _, album := range albums {
-	<div class="album">
-		<div>{album.ID}</div>
-		<div>{album.Title}</div>
-		<div>{album.Artist}</div>
-		<div>{fmt.Sprintf("%.2f", album.Price)}</div>
-		<button hx-delete={fmt.Sprintf("/albums/%s", album.ID)} hx-target=".album">Delete</button>
-	</div>
+	@Album(album)
     }
+    </div>
     </main>
 
     <footer>

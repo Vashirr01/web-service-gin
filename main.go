@@ -83,10 +83,13 @@ func postAlbums(c *gin.Context) {
 		return
 	}
 	insertSQL := `INSERT INTO albums (title, artist, price) VALUES (?, ?, ?);`
-	_, err = db.Exec(insertSQL, newAlbum.Title, newAlbum.Artist, newAlbum.Price)
+	res, err := db.Exec(insertSQL, newAlbum.Title, newAlbum.Artist, newAlbum.Price)
 	if err != nil {
 		log.Fatal(err)
 	}
+	id, err := res.LastInsertId()
+	newAlbum.ID = fmt.Sprintf("%d", id)
+	render(c, 200, Album(newAlbum))
 }
 
 func deleteAlbumByID(c *gin.Context) {
