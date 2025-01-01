@@ -29,7 +29,7 @@ templ MainTemp(albums []album) {
     </header>
 
     <main>
-    <form hx-post="/">
+    <form hx-post="/" hx-target="#albums" hx-swap="beforeend" hx-on-htmx-after-request="this.reset()">
     <div>
     <label>Title</label>
     <input type="text" class="add-album" name="title">
