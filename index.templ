@@ -10,11 +10,20 @@ templ Album(album album){
 		<div>{album.Title}</div>
 		<div>{album.Artist}</div>
 		<div>{fmt.Sprintf("%.2f", album.Price)}</div>
-		<button hx-delete={fmt.Sprintf("/albums/%s", album.ID)} hx-target=".album">Delete</button>
+		<button hx-delete={fmt.Sprintf("/albums/%s", album.ID)} hx-target="#albums">Delete</button>
 	</div>
 }
 
-templ MainTemp(albums []album) {
+templ AlbumsDiv(albums []album){
+    <div id="albums">
+    for _, album := range albums {
+	@Album(album)
+    }
+    </div>
+
+}
+
+templ MainTemp(albumsDiv templ.Component) {
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -44,13 +53,8 @@ templ MainTemp(albums []album) {
     </div>
     <button type="submit">Submit</button>
     </form>
-    <div id="albums">
-    for _, album := range albums {
-	@Album(album)
-    }
-    </div>
+    @albumsDiv
     </main>
-
     <footer>
     </footer>
 

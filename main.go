@@ -68,7 +68,11 @@ func getAlbums(c *gin.Context) {
 		rows.Scan(&a.ID, &a.Title, &a.Artist, &a.Price)
 		albums = append(albums, a)
 	}
-	render(c, 200, MainTemp(albums))
+	if c.GetHeader("HX-Request") == "true" {
+		render(c, 200, AlbumsDiv(albums))
+		return
+	}
+	render(c, 200, MainTemp(AlbumsDiv(albums)))
 }
 
 func postAlbums(c *gin.Context) {
@@ -101,6 +105,7 @@ func deleteAlbumByID(c *gin.Context) {
 		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "album not found"})
 		return
 	}
+	getAlbums(c)
 }
 
 func getAlbumByID(c *gin.Context) {
