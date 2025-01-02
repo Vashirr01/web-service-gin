@@ -10,17 +10,39 @@ templ Album(album album){
 		<div>{album.Title}</div>
 		<div>{album.Artist}</div>
 		<div>{fmt.Sprintf("%.2f", album.Price)}</div>
-		<button hx-delete={fmt.Sprintf("/albums/%s", album.ID)} hx-target="#albums">Delete</button>
+		<button hx-delete={fmt.Sprintf("/albums/%s", album.ID)} hx-target="#albums-div">Delete</button>
+		<button hx-get={fmt.Sprintf("/albums/%s/edit", album.ID)} hx-swap="outerHTML" hx-target="closest .album">Update</button>
 	</div>
 }
 
 templ AlbumsDiv(albums []album){
-    <div id="albums">
+    <div id="albums-div">
     for _, album := range albums {
 	@Album(album)
     }
     </div>
 
+}
+
+templ UpdateForm(album album) {
+    <form id="update-album" hx-put={fmt.Sprintf("/albums/%s", album.ID)} hx-target=".album" hx-swap="outerHTML">
+    <div>
+    <label>Title</label>
+    <input type="text" name="title" value={album.Title}>
+    </div>
+    <div>
+    <label>Artist</label>
+    <input type="text" name="artist" value={album.Artist}>
+    </div>
+    <div>
+    <label>Price</label>
+    <input type="number" name="price" value={fmt.Sprintf("%.2f", album.Price)}>
+    </div>
+    <button type="submit">Submit</button>
+    <button hx-get={fmt.Sprintf("/albums/%s", album.ID)} 
+                    hx-target="#update-album" 
+                    hx-swap="outerHTML">Cancel</button>
+    </form>
 }
 
 templ MainTemp(albumsDiv templ.Component) {
@@ -38,18 +60,18 @@ templ MainTemp(albumsDiv templ.Component) {
     </header>
 
     <main>
-    <form hx-post="/" hx-target="#albums" hx-swap="beforeend" hx-on-htmx-after-request="this.reset()">
+    <form id="add-album" hx-post="/" hx-target="#albums-div" hx-swap="beforeend" hx-on-htmx-after-request="this.reset()">
     <div>
     <label>Title</label>
-    <input type="text" class="add-album" name="title">
+    <input type="text" name="title">
     </div>
     <div>
     <label>Artist</label>
-    <input type="text" class="add-album" name="artist">
+    <input type="text" name="artist">
     </div>
     <div>
     <label>Price</label>
-    <input type="number" class="add-album" name="price">
+    <input type="number" name="price">
     </div>
     <button type="submit">Submit</button>
     </form>

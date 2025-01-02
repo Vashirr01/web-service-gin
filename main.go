@@ -44,6 +44,7 @@ func main() {
 
 	router.GET("/", getAlbums)
 	router.GET("/albums/:id", getAlbumByID)
+	router.GET("/albums/:id/edit", getAlbumForEdit)
 	router.POST("/", postAlbums)
 	router.DELETE("/albums/:id", deleteAlbumByID)
 	router.Run("localhost:8080")
@@ -117,4 +118,38 @@ func getAlbumByID(c *gin.Context) {
 		return
 	}
 	c.IndentedJSON(http.StatusOK, a)
+}
+
+func getAlbumForEdit(c *gin.Context) {
+	var album album
+	id := c.Param("id")
+	err := db.QueryRow("SELECT id, title, artist, price FROM albums WHERE id = ?", id).Scan(&album.ID, &album.Title, &album.Artist, &album.Price)
+
+	if err != nil {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "album not found"})
+		return
+	}
+	render(c, 200, UpdateForm(album))
+}
+
+func updateAlbumByID(c *gin.Context) {
+	var a album
+	id := c.Param("id")
+	updateSQL := `
+        UPDATE albums
+        SET title = ?, artist = ?, price = ?
+        WHERE id = ?;
+	`
+
+	res, err := db.Exec(updateSQL, a.Title, a.Artist, a.Price, id)
+	if err != nil {
+		log.Fatalf("Failed to update album: %v", err)
+	}
+	rowsAffected, _ := res.RowsAffected()
+	if rowsAffected == 0 {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "Album not found"})
+		return
+	}
+	getAlbums(c)
+
 }
