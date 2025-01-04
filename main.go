@@ -21,6 +21,22 @@ type album struct {
 	Price  float64 `json: "price"`
 }
 
+// func resetDatabase() error {
+// 	// Delete all records
+// 	_, err := db.Exec("DELETE FROM albums")
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	// Reset the autoincrement counter
+// 	_, err = db.Exec("DELETE FROM sqlite_sequence WHERE name='albums'")
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	return nil
+// }
+
 func main() {
 	//TODO error handling for database code
 	var err error
@@ -45,6 +61,7 @@ func main() {
 	router.GET("/", getAlbums)
 	router.GET("/:id", getAlbumByID)
 	router.POST("/", postAlbums)
+	router.PUT("/:id", updateAlbumByID)
 	router.DELETE("/:id", deleteAlbumByID)
 	router.Run("localhost:8080")
 }
@@ -133,15 +150,19 @@ func updateAlbumByID(c *gin.Context) {
         SET title = ?, artist = ?, price = ?
         WHERE id = ?;
 	`
+	a.Title = c.Request.FormValue("title")
+	a.Artist = c.Request.FormValue("artist")
+	price := c.Request.FormValue("price")
+	var err error
+	a.Price, err = strconv.ParseFloat(price, 64)
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "Invalid price"})
+		return
+	}
 
-	res, err := db.Exec(updateSQL, a.Title, a.Artist, a.Price, id)
+	_, err = db.Exec(updateSQL, a.Title, a.Artist, a.Price, id)
 	if err != nil {
 		log.Fatalf("Failed to update album: %v", err)
-	}
-	rowsAffected, _ := res.RowsAffected()
-	if rowsAffected == 0 {
-		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "Album not found"})
-		return
 	}
 	getAlbums(c)
 
