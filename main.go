@@ -43,10 +43,9 @@ func main() {
 	router := gin.Default()
 
 	router.GET("/", getAlbums)
-	router.GET("/albums/:id", getAlbumByID)
-	router.GET("/albums/:id/edit", getAlbumForEdit)
+	router.GET("/:id", getAlbumByID)
 	router.POST("/", postAlbums)
-	router.DELETE("/albums/:id", deleteAlbumByID)
+	router.DELETE("/:id", deleteAlbumByID)
 	router.Run("localhost:8080")
 }
 
@@ -117,19 +116,13 @@ func getAlbumByID(c *gin.Context) {
 		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "album not found"})
 		return
 	}
-	c.IndentedJSON(http.StatusOK, a)
-}
-
-func getAlbumForEdit(c *gin.Context) {
-	var album album
-	id := c.Param("id")
-	err := db.QueryRow("SELECT id, title, artist, price FROM albums WHERE id = ?", id).Scan(&album.ID, &album.Title, &album.Artist, &album.Price)
-
-	if err != nil {
-		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "album not found"})
-		return
+	header := c.GetHeader("getReq")
+	if header == "update" {
+		render(c, 200, UpdateForm(a))
 	}
-	render(c, 200, UpdateForm(album))
+	if header == "cancel" {
+		render(c, 200, Album(a))
+	}
 }
 
 func updateAlbumByID(c *gin.Context) {

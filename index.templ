@@ -10,8 +10,8 @@ templ Album(album album){
 		<div>{album.Title}</div>
 		<div>{album.Artist}</div>
 		<div>{fmt.Sprintf("%.2f", album.Price)}</div>
-		<button hx-delete={fmt.Sprintf("/albums/%s", album.ID)} hx-target="#albums-div">Delete</button>
-		<button hx-get={fmt.Sprintf("/albums/%s/edit", album.ID)} hx-swap="outerHTML" hx-target="closest .album">Update</button>
+		<button hx-delete={fmt.Sprintf("/%s", album.ID)} hx-target="#albums-div">Delete</button>
+		<button hx-get={fmt.Sprintf("/%s", album.ID)} hx-swap="outerHTML" hx-target="closest .album" hx-headers='{"getReq":"update"}'>Update</button>
 	</div>
 }
 
@@ -25,7 +25,8 @@ templ AlbumsDiv(albums []album){
 }
 
 templ UpdateForm(album album) {
-    <form id="update-album" hx-put={fmt.Sprintf("/albums/%s", album.ID)} hx-target=".album" hx-swap="outerHTML">
+    <div class="album">
+    <form id="update-album" hx-put={fmt.Sprintf("/%s", album.ID)} hx-target="this" hx-swap="outerHTML">
     <div>
     <label>Title</label>
     <input type="text" name="title" value={album.Title}>
@@ -39,10 +40,11 @@ templ UpdateForm(album album) {
     <input type="number" name="price" value={fmt.Sprintf("%.2f", album.Price)}>
     </div>
     <button type="submit">Submit</button>
-    <button hx-get={fmt.Sprintf("/albums/%s", album.ID)} 
-                    hx-target="#update-album" 
-                    hx-swap="outerHTML">Cancel</button>
+    <button hx-get={fmt.Sprintf("/%s", album.ID)} 
+                    hx-target="closest .album" 
+                    hx-swap="outerHTML" hx-headers='{"getReq":"cancel"}'>Cancel</button>
     </form>
+    </div>
 }
 
 templ MainTemp(albumsDiv templ.Component) {
