@@ -3,13 +3,14 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"log"
-	"net/http"
-	"strconv"
-
 	"github.com/a-h/templ"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"log"
+	"net/http"
+	"os"
+	"strconv"
 )
 
 var db *sql.DB
@@ -23,7 +24,17 @@ type album struct {
 
 func main() {
 	var err error
-	psqlInfo := "host=localhost port=5432 user=yourusername password=yourpassword dbname=albumsdb sslmode=disable"
+	err = godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_PORT"),
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_NAME"),
+	)
 
 	db, err = sql.Open("postgres", psqlInfo)
 	if err != nil {
@@ -41,7 +52,7 @@ func main() {
 	id SERIAL PRIMARY KEY,
 	title TEXT NOT NULL,
 	artist TEXT NOT NULL,
-	price DECIMAL(10,2)
+	price DECIMAL(10,2) NOT NULL
 	)`
 
 	_, err = db.Exec(createTableSQL)
@@ -141,8 +152,8 @@ func updateAlbumByID(c *gin.Context) {
 	id := c.Param("id")
 	updateSQL := `
         UPDATE albums
-        SET title = ?, artist = ?, price = ?
-        WHERE id = ?;
+        SET title = $1, artist = $2, price = $3 
+        WHERE id = $4;
 	`
 	a.Title = c.Request.FormValue("title")
 	a.Artist = c.Request.FormValue("artist")
