@@ -9,7 +9,7 @@ import (
 
 	"github.com/a-h/templ"
 	"github.com/gin-gonic/gin"
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/lib/pq"
 )
 
 var db *sql.DB
@@ -23,17 +23,27 @@ type album struct {
 
 func main() {
 	var err error
-	db, err = sql.Open("sqlite3", "albums.db")
+	psqlInfo := "host=localhost port=5432 user=yourusername password=yourpassword dbname=albumsdb sslmode=disable"
+
+	db, err = sql.Open("postgres", psqlInfo)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
+
+	//Test the connection
+	err = db.Ping()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	createTableSQL := `CREATE TABLE IF NOT EXISTS albums(
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	id SERIAL PRIMARY KEY,
 	title TEXT NOT NULL,
 	artist TEXT NOT NULL,
-	price FLOAT
+	price DECIMAL(10,2)
 	)`
+
 	_, err = db.Exec(createTableSQL)
 	if err != nil {
 		log.Fatalf("Failed to create table: %v", err)
@@ -86,19 +96,20 @@ func postAlbums(c *gin.Context) {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "Invalid price"})
 		return
 	}
-	insertSQL := `INSERT INTO albums (title, artist, price) VALUES (?, ?, ?);`
-	res, err := db.Exec(insertSQL, newAlbum.Title, newAlbum.Artist, newAlbum.Price)
+
+	insertSQL := `INSERT INTO albums (title, artist, price) VALUES ($1, $2, $3) RETURNING id;`
+	var id int
+	err = db.QueryRow(insertSQL, newAlbum.Title, newAlbum.Artist, newAlbum.Price).Scan(&id)
 	if err != nil {
 		log.Fatal(err)
 	}
-	id, err := res.LastInsertId()
 	newAlbum.ID = fmt.Sprintf("%d", id)
 	render(c, 200, Album(newAlbum))
 }
 
 func deleteAlbumByID(c *gin.Context) {
 	id := c.Param("id")
-	deleteSQL := `DELETE FROM albums WHERE id = ?;`
+	deleteSQL := `DELETE FROM albums WHERE id = $1;`
 	res, _ := db.Exec(deleteSQL, id)
 	rowsAffected, _ := res.RowsAffected()
 	if rowsAffected == 0 {
@@ -111,7 +122,7 @@ func deleteAlbumByID(c *gin.Context) {
 func getAlbumByID(c *gin.Context) {
 	var a album
 	id := c.Param("id")
-	err := db.QueryRow("SELECT id, title, artist, price FROM albums WHERE id = ?", id).Scan(&a.ID, &a.Title, &a.Artist, &a.Price)
+	err := db.QueryRow("SELECT id, title, artist, price FROM albums WHERE id = $1", id).Scan(&a.ID, &a.Title, &a.Artist, &a.Price)
 	if err == sql.ErrNoRows {
 		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "album not found"})
 		return
