@@ -21,24 +21,7 @@ type album struct {
 	Price  float64 `json: "price"`
 }
 
-// func resetDatabase() error {
-// 	// Delete all records
-// 	_, err := db.Exec("DELETE FROM albums")
-// 	if err != nil {
-// 		return err
-// 	}
-//
-// 	// Reset the autoincrement counter
-// 	_, err = db.Exec("DELETE FROM sqlite_sequence WHERE name='albums'")
-// 	if err != nil {
-// 		return err
-// 	}
-//
-// 	return nil
-// }
-
 func main() {
-	//TODO error handling for database code
 	var err error
 	db, err = sql.Open("sqlite3", "albums.db")
 	if err != nil {
@@ -164,6 +147,23 @@ func updateAlbumByID(c *gin.Context) {
 	if err != nil {
 		log.Fatalf("Failed to update album: %v", err)
 	}
-	getAlbums(c)
-
+	// Get the updated album to return
+	a.ID = id
+	render(c, 200, Album(a))
 }
+
+// func resetDatabase() error {
+// 	// Delete all records
+// 	_, err := db.Exec("DELETE FROM albums")
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	// Reset the autoincrement counter
+// 	_, err = db.Exec("DELETE FROM sqlite_sequence WHERE name='albums'")
+// 	if err != nil {
+// 		return err
+// 	}
+//
+// 	return nil
+// }
