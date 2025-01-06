@@ -1,95 +1,300 @@
 package main
 
-import(
-	"fmt"
+import (
+    "fmt"
 )
 
-templ Album(album album){
-	<div class="album">
-		<div>{album.ID}</div>
-		<div>{album.Title}</div>
-		<div>{album.Artist}</div>
-		<div>{fmt.Sprintf("%.2f", album.Price)}</div>
-		<button hx-delete={fmt.Sprintf("/%s", album.ID)} hx-target="#albums-div">Delete</button>
-		<button hx-get={fmt.Sprintf("/%s", album.ID)} hx-swap="outerHTML" hx-target="closest .album" hx-headers='{"getReq":"update"}'>Update</button>
-	</div>
+templ Album(album album) {
+    <div class="album-card">
+        <div class="album-content">
+            <div class="album-id">#{album.ID}</div>
+            <div class="album-title">{album.Title}</div>
+            <div class="album-artist">{album.Artist}</div>
+            <div class="album-price">${fmt.Sprintf("%.2f", album.Price)}</div>
+        </div>
+        <div class="album-actions">
+            <button class="btn btn-delete" hx-delete={fmt.Sprintf("/%s", album.ID)} hx-target="#albums-div">
+                Delete
+            </button>
+            <button class="btn btn-update" 
+                    hx-get={fmt.Sprintf("/%s", album.ID)} 
+                    hx-swap="outerHTML" 
+                    hx-target="closest .album-card" 
+                    hx-headers='{"getReq":"update"}'>
+                Update
+            </button>
+        </div>
+    </div>
 }
 
-templ AlbumsDiv(albums []album){
-    <div id="albums-div">
-    for _, album := range albums {
-	@Album(album)
-    }
+templ AlbumsDiv(albums []album) {
+    <div id="albums-div" class="albums-grid">
+        for _, album := range albums {
+            @Album(album)
+        }
     </div>
-
 }
 
 templ UpdateForm(album album) {
-    <div class="album">
-    <form id="update-album" 
-          hx-put={fmt.Sprintf("/%s", album.ID)} 
-          hx-target="this" 
-          hx-swap="outerHTML">
-        <div>
-            <label>Title</label>
-            <input type="text" name="title" value={album.Title}>
-        </div>
-        <div>
-            <label>Artist</label>
-            <input type="text" name="artist" value={album.Artist}>
-        </div>
-        <div>
-            <label>Price</label>
-            <input type="number" 
-                   name="price" 
-                   step="0.01" 
-                   min="0" 
-                   value={fmt.Sprintf("%.2f", album.Price)}>
-        </div>
-        <button type="submit">Submit</button>
-        <button hx-get={fmt.Sprintf("/%s", album.ID)} 
-                hx-target="closest .album" 
-                hx-swap="outerHTML" 
-                hx-headers='{"getReq":"cancel"}'>Cancel</button>
-    </form>
+    <div class="album-card">
+        <form id="update-album" 
+              class="update-form"
+              hx-put={fmt.Sprintf("/%s", album.ID)} 
+              hx-target="this" 
+              hx-swap="outerHTML">
+            <div class="form-group">
+                <label>Title</label>
+                <input type="text" name="title" value={album.Title} class="form-input"/>
+            </div>
+            <div class="form-group">
+                <label>Artist</label>
+                <input type="text" name="artist" value={album.Artist} class="form-input"/>
+            </div>
+            <div class="form-group">
+                <label>Price</label>
+                <input type="number" 
+                       name="price" 
+                       step="0.01" 
+                       min="0" 
+                       value={fmt.Sprintf("%.2f", album.Price)}
+                       class="form-input"/>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-submit">Save</button>
+                <button class="btn btn-cancel"
+                        hx-get={fmt.Sprintf("/%s", album.ID)} 
+                        hx-target="closest .album-card" 
+                        hx-swap="outerHTML" 
+                        hx-headers='{"getReq":"cancel"}'>
+                    Cancel
+                </button>
+            </div>
+        </form>
     </div>
 }
 
 templ MainTemp(albumsDiv templ.Component) {
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your Fav Albums</title>
-</head>
-<body>
-    <header>
-        <h1>Your Fav Albums</h1>
-    </header>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
+        <meta charset="UTF-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <title>Your Favorite Albums</title>
+        <style>
+            :root {
+                --primary-color: #4a90e2;
+                --secondary-color: #2c3e50;
+                --success-color: #27ae60;
+                --danger-color: #e74c3c;
+                --background-color: #f5f6fa;
+                --card-background: #ffffff;
+                --text-color: #2c3e50;
+                --border-radius: 8px;
+                --shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
 
-    <main>
-    <form id="add-album" hx-post="/" hx-target="#albums-div" hx-swap="beforeend" hx-on-htmx-after-request="this.reset()">
-    <div>
-    <label>Title</label>
-    <input type="text" name="title">
-    </div>
-    <div>
-    <label>Artist</label>
-    <input type="text" name="artist">
-    </div>
-    <div>
-    <label>Price</label>
-    <input type="number" name="price" step="0.01" min="0">
-    </div>
-    <button type="submit">Submit</button>
-    </form>
-    @albumsDiv
-    </main>
-    <footer>
-    </footer>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
 
-</body>
-</html>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                line-height: 1.6;
+                color: var(--text-color);
+                background-color: var(--background-color);
+                padding: 2rem;
+            }
+
+            header {
+                text-align: center;
+                margin-bottom: 3rem;
+            }
+
+            h1 {
+                color: var(--secondary-color);
+                font-size: 2.5rem;
+                font-weight: 700;
+                margin-bottom: 1rem;
+            }
+
+            .albums-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                gap: 2rem;
+                margin-top: 2rem;
+            }
+
+            .album-card {
+                background: var(--card-background);
+                border-radius: var(--border-radius);
+                padding: 1.5rem;
+                box-shadow: var(--shadow);
+                transition: transform 0.2s ease;
+            }
+
+            .album-card:hover {
+                transform: translateY(-2px);
+            }
+
+            .album-content {
+                margin-bottom: 1rem;
+            }
+
+            .album-id {
+                color: var(--primary-color);
+                font-size: 0.9rem;
+                margin-bottom: 0.5rem;
+            }
+
+            .album-title {
+                font-size: 1.25rem;
+                font-weight: 600;
+                margin-bottom: 0.5rem;
+            }
+
+            .album-artist {
+                color: var(--secondary-color);
+                margin-bottom: 0.5rem;
+            }
+
+            .album-price {
+                font-weight: 600;
+                color: var(--success-color);
+            }
+
+            .album-actions {
+                display: flex;
+                gap: 1rem;
+            }
+
+            .btn {
+                padding: 0.5rem 1rem;
+                border: none;
+                border-radius: var(--border-radius);
+                cursor: pointer;
+                font-weight: 500;
+                transition: opacity 0.2s ease;
+            }
+
+            .btn:hover {
+                opacity: 0.9;
+            }
+
+            .btn-delete {
+                background-color: var(--danger-color);
+                color: white;
+            }
+
+            .btn-update {
+                background-color: var(--primary-color);
+                color: white;
+            }
+
+            .btn-submit {
+                background-color: var(--success-color);
+                color: white;
+            }
+
+            .btn-cancel {
+                background-color: var(--secondary-color);
+                color: white;
+            }
+
+            #add-album {
+                max-width: 500px;
+                margin: 0 auto;
+                background: var(--card-background);
+                padding: 2rem;
+                border-radius: var(--border-radius);
+                box-shadow: var(--shadow);
+            }
+
+            .form-group {
+                margin-bottom: 1rem;
+            }
+
+            .form-group label {
+                display: block;
+                margin-bottom: 0.5rem;
+                color: var(--secondary-color);
+                font-weight: 500;
+            }
+
+            .form-input {
+                width: 100%;
+                padding: 0.75rem;
+                border: 1px solid #ddd;
+                border-radius: var(--border-radius);
+                font-size: 1rem;
+                transition: border-color 0.2s ease;
+            }
+
+            .form-input:focus {
+                outline: none;
+                border-color: var(--primary-color);
+            }
+
+            .form-actions {
+                display: flex;
+                gap: 1rem;
+                margin-top: 1.5rem;
+            }
+
+            .update-form {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            @media (max-width: 768px) {
+                body {
+                    padding: 1rem;
+                }
+
+                .albums-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <h1>Your Favorite Albums</h1>
+        </header>
+        <main>
+            <form id="add-album" 
+                  hx-post="/" 
+                  hx-target="#albums-div" 
+                  hx-swap="beforeend" 
+                  hx-on-htmx-after-request="this.reset()">
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" name="title" class="form-input" required/>
+                </div>
+                <div class="form-group">
+                    <label>Artist</label>
+                    <input type="text" name="artist" class="form-input" required/>
+                </div>
+                <div class="form-group">
+                    <label>Price</label>
+                    <input type="number" 
+                           name="price" 
+                           step="0.01" 
+                           min="0" 
+                           class="form-input" 
+                           required/>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-submit">Add Album</button>
+                </div>
+            </form>
+            @albumsDiv
+        </main>
+        <footer>
+        </footer>
+    </body>
+    </html>
 }

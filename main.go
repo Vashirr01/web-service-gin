@@ -16,10 +16,10 @@ import (
 var db *sql.DB
 
 type album struct {
-	ID     string  `json: "id"`
-	Title  string  `json: "title"`
-	Artist string  `json: "artist"`
-	Price  float64 `json: "price"`
+	ID     string  `json:"id"`
+	Title  string  `json:"title"`
+	Artist string  `json:"artist"`
+	Price  float64 `json:"price"`
 }
 
 func main() {
@@ -86,9 +86,17 @@ func getAlbums(c *gin.Context) {
 	var albums []album
 	for rows.Next() {
 		var a album
-		rows.Scan(&a.ID, &a.Title, &a.Artist, &a.Price)
+		if err := rows.Scan(&a.ID, &a.Title, &a.Artist, &a.Price); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 		albums = append(albums, a)
 	}
+	if err = rows.Err(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
 	if c.GetHeader("HX-Request") == "true" {
 		render(c, 200, AlbumsDiv(albums))
 		return
@@ -97,6 +105,15 @@ func getAlbums(c *gin.Context) {
 }
 
 func postAlbums(c *gin.Context) {
+	if title := c.PostForm("title"); title == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "title is required"})
+		return
+	}
+	if artist := c.PostForm("artist"); artist == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "artist is required"})
+		return
+	}
+
 	var newAlbum album
 	newAlbum.Title = c.PostForm("title")
 	newAlbum.Artist = c.PostForm("artist")
@@ -104,7 +121,7 @@ func postAlbums(c *gin.Context) {
 	var err error
 	newAlbum.Price, err = strconv.ParseFloat(price, 64)
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "Invalid price"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid price"})
 		return
 	}
 
@@ -112,7 +129,8 @@ func postAlbums(c *gin.Context) {
 	var id int
 	err = db.QueryRow(insertSQL, newAlbum.Title, newAlbum.Artist, newAlbum.Price).Scan(&id)
 	if err != nil {
-		log.Fatal(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 	newAlbum.ID = fmt.Sprintf("%d", id)
 	render(c, 200, Album(newAlbum))
@@ -121,10 +139,18 @@ func postAlbums(c *gin.Context) {
 func deleteAlbumByID(c *gin.Context) {
 	id := c.Param("id")
 	deleteSQL := `DELETE FROM albums WHERE id = $1;`
-	res, _ := db.Exec(deleteSQL, id)
-	rowsAffected, _ := res.RowsAffected()
+	res, err := db.Exec(deleteSQL, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 	if rowsAffected == 0 {
-		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "album not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "album not found"})
 		return
 	}
 	getAlbums(c)
@@ -135,9 +161,14 @@ func getAlbumByID(c *gin.Context) {
 	id := c.Param("id")
 	err := db.QueryRow("SELECT id, title, artist, price FROM albums WHERE id = $1", id).Scan(&a.ID, &a.Title, &a.Artist, &a.Price)
 	if err == sql.ErrNoRows {
-		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "album not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "album not found"})
 		return
 	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
 	header := c.GetHeader("getReq")
 	if header == "update" {
 		render(c, 200, UpdateForm(a))
@@ -148,6 +179,15 @@ func getAlbumByID(c *gin.Context) {
 }
 
 func updateAlbumByID(c *gin.Context) {
+	if title := c.PostForm("title"); title == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "title is required"})
+		return
+	}
+	if artist := c.PostForm("artist"); artist == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "artist is required"})
+		return
+	}
+
 	var a album
 	id := c.Param("id")
 	updateSQL := `
@@ -161,31 +201,27 @@ func updateAlbumByID(c *gin.Context) {
 	var err error
 	a.Price, err = strconv.ParseFloat(price, 64)
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "Invalid price"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid price"})
 		return
 	}
 
-	_, err = db.Exec(updateSQL, a.Title, a.Artist, a.Price, id)
+	res, err := db.Exec(updateSQL, a.Title, a.Artist, a.Price, id)
 	if err != nil {
-		log.Fatalf("Failed to update album: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if rowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "album not found"})
+		return
+	}
+
 	// Get the updated album to return
 	a.ID = id
 	render(c, 200, Album(a))
 }
-
-// func resetDatabase() error {
-// 	// Delete all records
-// 	_, err := db.Exec("DELETE FROM albums")
-// 	if err != nil {
-// 		return err
-// 	}
-//
-// 	// Reset the autoincrement counter
-// 	_, err = db.Exec("DELETE FROM sqlite_sequence WHERE name='albums'")
-// 	if err != nil {
-// 		return err
-// 	}
-//
-// 	return nil
-// }
