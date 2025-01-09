@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 )
 
 var db *sql.DB
@@ -26,14 +27,37 @@ func main() {
 	var err error
 	err = godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Printf("Warning: error loading .env file")
 	}
-	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+
+	// First connect to default postgres database
+	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=postgres sslmode=disable",
 		os.Getenv("DB_HOST"),
 		os.Getenv("DB_PORT"),
 		os.Getenv("DB_USER"),
 		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_NAME"),
+	)
+
+	// Connect to postgres database first
+	tempDB, err := sql.Open("postgres", psqlInfo)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create the albums database if it doesn't exist
+	_, err = tempDB.Exec("CREATE DATABASE albums")
+	if err != nil {
+		log.Printf("Notice: %v", err) // Might error if DB exists, that's ok
+	}
+
+	tempDB.Close()
+
+	// Now connect to the albums database
+	psqlInfo = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=albums sslmode=disable",
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_PORT"),
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
 	)
 
 	db, err = sql.Open("postgres", psqlInfo)
@@ -42,32 +66,42 @@ func main() {
 	}
 	defer db.Close()
 
-	//Test the connection
-	err = db.Ping()
+	// Add retry logic for the connection
+	maxRetries := 5
+	for i := 0; i < maxRetries; i++ {
+		err = db.Ping()
+		if err == nil {
+			break
+		}
+		log.Printf("Failed to connect to database, attempt %d/%d: %v", i+1, maxRetries, err)
+		time.Sleep(time.Second * 5)
+	}
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Failed to connect to database after multiple attempts:", err)
 	}
 
 	createTableSQL := `CREATE TABLE IF NOT EXISTS albums(
-	id SERIAL PRIMARY KEY,
-	title TEXT NOT NULL,
-	artist TEXT NOT NULL,
-	price DECIMAL(10,2) NOT NULL
-	)`
+        id SERIAL PRIMARY KEY,
+        title TEXT NOT NULL,
+        artist TEXT NOT NULL,
+        price DECIMAL(10,2) NOT NULL
+    )`
 
 	_, err = db.Exec(createTableSQL)
 	if err != nil {
 		log.Fatalf("Failed to create table: %v", err)
 	}
 	fmt.Println("Table created successfully!")
-	router := gin.Default()
 
+	router := gin.Default()
 	router.GET("/", getAlbums)
 	router.GET("/:id", getAlbumByID)
 	router.POST("/", postAlbums)
 	router.PUT("/:id", updateAlbumByID)
 	router.DELETE("/:id", deleteAlbumByID)
-	router.Run("localhost:8080")
+
+	// Changed from localhost:8080 to :8080 to listen on all interfaces
+	router.Run(":8080")
 }
 
 func render(c *gin.Context, status int, template templ.Component) error {
